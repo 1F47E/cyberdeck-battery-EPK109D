@@ -9,32 +9,33 @@
 
 #define I2C_ADDRESS_INA 0x40
 
-// LED
+// LED SETUP
 #define NUM_LEDS 1
 #define DATA_PIN 23
 #define CLOCK_PIN 22
-CRGB leds[NUM_LEDS];
-
-
-// OLED setup
-U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);  
-
-// INA setup
-INA219_WE ina219 = INA219_WE(I2C_ADDRESS_INA);
 
 // LED COLORS IN HUE
 #define led_green_hue 42
 #define led_red_hue   95
 #define led_blue_hue  200
 #define led_saturation 250
+
+// global vars
 bool is_sensor_init = false;
 bool is_charging = false;
 float batt_voltage_min = CELL_V_MIN * CELL_COUNT;
 float batt_voltage_max = CELL_V_MAX * CELL_COUNT;
 int led_brightness = 0;
+CRGB leds[NUM_LEDS];
+
+// OLED setup
+U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);  
+
+// Current sensor
+INA219_WE ina219 = INA219_WE(I2C_ADDRESS_INA);
 
 void setup() {
-  // LED
+  // LED init
   FastLED.addLeds<WS2812B, DATA_PIN, RGB>(leds, NUM_LEDS);
 
   // OLED
@@ -42,7 +43,7 @@ void setup() {
   
   Serial.begin(9600);
   
-  // I2C
+  // Current sensor init
   Wire.begin();
   if(!ina219.init()){
     Serial.println("INA219 not connected!");
@@ -50,9 +51,7 @@ void setup() {
   } else {
     is_sensor_init = true;
   }
-
   ina219.setMeasureMode(CONTINUOUS); // choose mode and uncomment for change of default
-  
 }
 
 // graphics helpers
@@ -78,32 +77,8 @@ void draw_bar(uint8_t x, uint8_t is_inverse, bool is_cross)
 
 }
 
-// TODO finish dot animation
-void draw_dot(uint8_t x)
-{ 
-  u8x8.setInverseFont(false);
-  uint8_t r;
-  int charge_bar_y = 2;
-  int charge_bar_height = 5;
-//  // clear bar
-  for(int r = charge_bar_y; r < charge_bar_height; r++ ) {
-      u8x8.setCursor(x, r);
-      u8x8.print(" ");
-  }
-  
-  // draw random dot
-  int dot_y = random(charge_bar_y, charge_bar_height);
-  u8x8.setCursor(x, dot_y);
-  u8x8.print("+");
-}
-
 
 void loop() {
-
-  // TODO put it somewhere else to fix text overlaping issue
-  // if kept like this it will flicker
-  //  u8x8.clear(); 
-
   // ===== CURRENT SENSOR READINGS =====
   if (!is_sensor_init) {
     // TODO put error message on screen
@@ -133,11 +108,11 @@ void loop() {
 
 
   // ===== OLED GRAPHICS =====
-  
   u8x8.noInverse();
   u8x8.setFont(u8x8_font_amstrad_cpc_extended_f);    
 
   // AMPS + V
+  // TODO convert to A if >1000
   u8x8.setCursor(1,6); // x, y
   u8x8.print(int(current_mA));
   u8x8.print("mA    ");
@@ -149,7 +124,7 @@ void loop() {
   // CHARGE %
   u8x8.setCursor(5,0);
   u8x8.print(percents);
-  u8x8.print("%");
+  u8x8.print("%     ");
 
 
   // LINE 2
@@ -159,9 +134,13 @@ void loop() {
   // 1 col = 1/16 charge = 6.25%
   int total_rows = 16;
   int bar_count = int(percents)/(100/total_rows);
-  for(int x = 0; x < bar_count; x++ )
+  for(int x = 0; x < total_rows; x++ )
   {
-    draw_bar(x, 1, is_charging);
+    if (x < bar_count) {
+      draw_bar(x, 1, is_charging);
+    } else {
+      draw_bar(x, 0, is_charging); // draw black line
+    }
   }
 
   // charging animation
@@ -206,5 +185,4 @@ void led_animate(int color) {
       FastLED.show();
       delay(3);
     }
-    
 }
