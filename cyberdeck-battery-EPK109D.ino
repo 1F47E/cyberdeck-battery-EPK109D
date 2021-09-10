@@ -1,6 +1,3 @@
-# TODO
-# fix linear animation of the led
-#
 
 #include <Wire.h>
 #include <U8g2lib.h>
@@ -169,6 +166,8 @@ void loop() {
     led_animate(led_red_hue);
 
   // DONE CHARGING (green)
+  // TODO find another solution. THIS ONE IS NOT WORKING
+  // BMS cuts off the voltage and there is no negative current flow to check. 
   } else if (is_charging && percents >= 99) {
     led_animate(led_green_hue);
   } else {
