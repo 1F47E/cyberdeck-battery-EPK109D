@@ -1,3 +1,7 @@
+# TODO
+# fix linear animation of the led
+#
+
 #include <Wire.h>
 #include <U8g2lib.h>
 #include <INA219_WE.h>
